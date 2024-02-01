@@ -2,19 +2,22 @@ const express = require("express");
 const app = express();
 const cors = require("cors");
 const port = 3042;
+const {accounts} = require("../accounts/src/accounts")
 
 app.use(cors());
 app.use(express.json());
 
-const balances = {
-  "0x1": 100,
-  "0x2": 50,
-  "0x3": 75,
-};
+const balances = new Map()
+    .set(accounts[0].address, accounts[0].initialAmount)
+    .set(accounts[1].address, accounts[1].initialAmount)
+    .set(accounts[2].address, accounts[2].initialAmount)
 
 app.get("/balance/:address", (req, res) => {
   const { address } = req.params;
-  const balance = balances[address] || 0;
+
+  const balance = balances.get(address) | 0
+
+  console.log('balance:', balance)
   res.send({ balance });
 });
 
@@ -24,12 +27,22 @@ app.post("/send", (req, res) => {
   setInitialBalance(sender);
   setInitialBalance(recipient);
 
-  if (balances[sender] < amount) {
+  const senderBalance = balances.get(sender)
+  const recipientBalance = balances.get(recipient)
+
+  console.log('senderBalance:', senderBalance)
+  console.log('recipientBalance:', senderBalance)
+
+  if (senderBalance < amount) {
     res.status(400).send({ message: "Not enough funds!" });
   } else {
-    balances[sender] -= amount;
-    balances[recipient] += amount;
-    res.send({ balance: balances[sender] });
+    balances.set(sender, senderBalance - amount);
+    balances.set(recipient, recipientBalance + amount);
+
+    console.log('senderBalance:', balances.get(sender))
+    console.log('recipientBalance:', balances.get(recipient))
+
+    res.send({ balance: senderBalance - amount });
   }
 });
 
